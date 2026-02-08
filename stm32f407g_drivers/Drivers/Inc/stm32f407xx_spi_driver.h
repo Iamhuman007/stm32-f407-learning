@@ -14,7 +14,7 @@ typedef struct
 {
 	uint8_t SPI_DeviceMode;
 	uint8_t SPI_BusConfig;
-	uint8_t SPI_ScklSpeed;
+	uint8_t SPI_SclkSpeed;
 	uint8_t SPI_DFF;
 	uint8_t SPI_CPOL;
 	uint8_t SPI_CPHA;
@@ -23,10 +23,27 @@ typedef struct
 
 typedef struct
 {
-	SPI_RegDef_t   *pSPIx;   /*<holds the base address of SPIxx(x:0,1,2) peripherals>*/
-	SPI_Config_t    SPIConfig;
+	SPI_RegDef_t 	*pSPIx;   /*!< This holds the base address of SPIx(x:0,1,2) peripheral >*/
+	SPI_Config_t 	SPIConfig;
+	uint8_t 		*pTxBuffer; /* !< To store the app. Tx buffer address > */
+	uint8_t 		*pRxBuffer;	/* !< To store the app. Rx buffer address > */
+	uint32_t 		TxLen;		/* !< To store Tx len > */
+	uint32_t 		RxLen;		/* !< To store Tx len > */
+	uint8_t 		TxState;	/* !< To store Tx state > */
+	uint8_t 		RxState;	/* !< To store Rx state > */
 }SPI_Handle_t;
 
+
+/* SPI application state*/
+#define SPI_READY                     0
+#define SPI_BUSY_IN_RX                1
+#define SPI_BUSY_IN_TX                2
+
+/* Possible SPI application events*/
+#define SPI_EVENT_TX_CMPLT       1
+#define SPI_EVENT_RX_CMPLT       2
+#define SPI_EVENT_OVR_ERR        3
+#define SPI_EVENT_CRC_ERR        4
 
 /*
  *@ SPI Device Mode
@@ -90,6 +107,7 @@ typedef struct
 
 
 
+
 /******************************************************************************************
  *								APIs supported by this driver
  *		 For more information about the APIs check the function definitions
@@ -115,6 +133,12 @@ void SPI_SendData(SPI_RegDef_t *pSPIx, uint8_t *pTxBuffer, uint32_t Len);
 void SPI_ReceiveData(SPI_RegDef_t *pSPIx, uint8_t *pRxBuffer, uint32_t Len);
 
 
+//  Non-Blocking(interrupt based)
+uint8_t SPI_SendDataIT(SPI_Handle_t *pSPIHandle, uint8_t *pTxBuffer, uint32_t Len);
+
+uint8_t SPI_ReceiveDataIT(SPI_Handle_t *pSPIHandle, uint8_t *pRxBuffer, uint32_t Len);
+
+
 /*
  * IRQ Configuration and ISR handling
  */
@@ -134,5 +158,13 @@ void  SPI_SSIConfig(SPI_RegDef_t *pSPIx, uint8_t EnOrDi);
 
 void  SPI_SSOEConfig(SPI_RegDef_t *pSPIx, uint8_t EnOrDi);
 
+void SPI_ClearOVRFlag(SPI_Handle_t *pSPIHandle);
+
+void SPI_CloseTransimission(SPI_Handle_t *pSPIHandle);
+
+void SPI_CloseReception(SPI_Handle_t *pSPIHandle);
+
+
+void SPI_ApplicationEventCallback(SPI_Handle_t *pSPIHandle, uint8_t AppEv);
 
 #endif /* INC_STM32F407XX_SPI_DRIVER_H_ */

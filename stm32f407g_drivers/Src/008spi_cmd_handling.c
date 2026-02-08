@@ -554,13 +554,61 @@ int main(void)
     	// send other arguments
     	args[0] = LED_PIN;
     	args[1] = LED_ON;
-    	SPI_ReceiveData(SPI2, &args, 2);
+    	SPI_SendData(SPI2, &args, 2);
     }
-     // First send length information
-    uint8_t dataLen = strlen(user_data);
-    SPI_SendData(SPI2, &dataLen, 1);
+    // end of led control command 1
 
-     SPI_SendData(SPI2, (uint8_t*)user_data, strlen(user_data));
+
+    // command 2: CMD_SENSOR_READ
+
+    while(!GPIO_ReadFromInputPin(GPIOA, GPIO_PIN_NO_0)){}
+       delay();
+
+    command_code = COMMAND_SENSOR_READ;
+    SPI_SendData(SPI2, &command_code, 1);
+    // do dummy read to clear RXNE
+    SPI_ReceiveData(SPI2, &dummy_read, 1);
+
+
+    SPI_SendData(SPI2, &dummy_write, 1);
+    SPI_ReceiveData(SPI2, &ackbyte, 1);
+
+    if (SPI_VerifyResponse(ackbyte))
+    {
+    	// send other arguments
+    	args[0] = ANALOG_PIN0;
+//    	args[1] = LED_ON;
+    	SPI_SendData(SPI2, &args, 1);
+
+
+        // do dummy read to clear RXNE
+        SPI_ReceiveData(SPI2, &dummy_read, 1);
+
+        // insert delay for the ADC conversion to complete on arduino
+            delay();
+        // send some dummy 1byte to fetch reponse from the slave  ----- i didnt understand why dummy bit is sent here?
+
+        SPI_SendData(SPI2, &dummy_write, 1);
+        uint8_t analog_read;
+        SPI_ReceiveData(SPI2, &analog_read, 1);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+     // First send length information
+//    uint8_t dataLen = strlen(user_data);
+//    SPI_SendData(SPI2, &dataLen, 1);
+//
+//     SPI_SendData(SPI2, (uint8_t*)user_data, strlen(user_data));
 
      // Before Disabling the SPI peripheral we have to enusre that BSY flag is reset
      while(SPI_GetFlagStatus(SPI2, SPI_BUSY_FLAG)){}

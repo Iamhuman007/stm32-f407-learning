@@ -12,9 +12,11 @@
  * base address of flash and SRAM memories
  * by default the compiler treats number as signed hence we need to specify that the memory is unsigned.
  */
+#include<stddef.h>
 #include<stdint.h>
 
 #define __vo volatile
+#define __weak __attribute((weak))
 
 /**********************************START:Processor Specific Details **********************************/
 /*
@@ -211,6 +213,25 @@ typedef struct
 	__vo uint32_t I2SPR;
 
 } SPI_RegDef_t;
+
+/*
+ * peripheral register definition structure for I2C
+ */
+typedef struct
+{
+  __vo uint32_t	 CR1;
+  __vo uint32_t	 CR2;
+  __vo uint32_t	 OAR1;
+  __vo uint32_t	 OAR2;
+  __vo uint32_t	 DR;
+  __vo uint32_t	 SR1;
+  __vo uint32_t	 SR2;
+  __vo uint32_t	 CCR;
+  __vo uint32_t	 TRISE;
+  __vo uint32_t	 FLTR;
+  __vo uint32_t	 SR1;
+}I2C_RegDef_t;
+
 /*
  * peripheral definitions ( Peripheral base addresses type casted to xxx_RegDef_t)
  */
@@ -234,6 +255,11 @@ typedef struct
 #define SPI2                 ((SPI_RegDef_t*)SPI2_BASEADDR)
 #define SPI3                 ((SPI_RegDef_t*)SPI3_BASEADDR)
 //#define SPI4                 ((SPI_RegDef_t*)SPI4_BASEADDR)
+
+#define I2C1                 ((I2C_RegDef_t*)I2C1_BASEADDR)
+#define I2C2                 ((I2C_RegDef_t*)I2C2_BASEADDR)
+#define I2C3                 ((I2C_RegDef_t*)I2C3_BASEADDR)
+
 // i get that we are giving small name to the spi1 _baseaddr but does it have to a pointer of regdef_t
 /*
  * Clock Enable Macros for GPIOx peripherals
@@ -304,6 +330,17 @@ typedef struct
 /*
  * Clock Disable Macros for SPIx peripherals
  */
+#define SPI1_PCLK_DI() (RCC->APB2ENR |= ~(1 << 12))
+#define SPI2_PCLK_DI() (RCC->APB1ENR |= ~(1 << 14))
+#define SPI3_PCLK_DI() (RCC->APB1ENR |= ~(1 << 15))
+#define SPI4_PCLK_DI() (RCC->APB2ENR |= ~(1 << 13))
+
+/*
+ * Clock Disable Macros for I2Cx peripherals
+ */
+#define I2C1_PCLK_DI() (RCC->APB1ENR |= ~(1 << 21))
+#define I2C2_PCLK_DI() (RCC->APB1ENR |= ~(1 << 22))
+#define I2C3_PCLK_DI() (RCC->APB1ENR |= ~(1 << 23))
 
 /*
  * Clock Disable Macros for USARTx peripherals
@@ -341,6 +378,24 @@ typedef struct
 								        (x == GPIOG)?6:\
 								        (x == GPIOH)?7: \
 								        (x == GPIOI)?8:0)
+
+/*
+ * IRQ(Interrupt Request) Numbers of STM32F407x MCU
+ * NOTE: update these macros with valid values according to your MCU
+ * TODO: You may complete this list for other peripherals
+ */
+
+#define IRQ_NO_EXTI0 		6
+#define IRQ_NO_EXTI1 		7
+#define IRQ_NO_EXTI2 		8
+#define IRQ_NO_EXTI3 		9
+#define IRQ_NO_EXTI4 		10
+#define IRQ_NO_EXTI9_5 		23
+#define IRQ_NO_EXTI15_10 	40
+#define IRQ_NO_SPI1			35
+#define IRQ_NO_SPI2         36
+#define IRQ_NO_SPI3         51
+#define IRQ_NO_SPI4
 
 
 
@@ -393,7 +448,60 @@ typedef struct
 #define SPI_SR_FRE                       8
 
 
+// I2C_CR1 REGISTER
+#define I2C_CR1_PE                       0
+#define I2C_CR1_SMBU_S                   1
+#define I2C_CR1_SMB_TYPE                 3
+#define I2C_CR1_ENARP                    4
+#define I2C_CR1_ENPEC                    5
+#define I2C_CR1_ENGC                     6
+#define I2C_CR1_NO_STRETCH               7
+#define I2C_CR1_START                    8
+#define I2C_CR1_STOP                     9
+#define I2C_CR1_ACK                      10
+#define I2C_CR1_POS                      11
+#define I2C_CR1_PEC                      12
+#define I2C_CR1_ALERT                    13
+#define I2C_CR1_SWRST                    15
+
+// I2C_CR2 REGISTER
+#define I2C_CR2_FREQ                     0 // 0 : 5 for freq
+#define I2C_CR2_ITERREN                  8
+#define I2C_CR2_ITEVTEN                  9
+#define I2C_CR2_ITBUFEN                  10
+#define I2C_CR2_DMAEN                    11
+#define I2C_CR2_LAST                     12
+
+// I2C_SR1 REGISTER
+#define I2C_SR1_SB                       0
+#define I2C_SR1_ADDR                     1
+#define I2C_SR1_BTF                      2
+#define I2C_SR1_ADD10                    3
+#define I2C_SR1_STOPF                    4
+#define I2C_SR1_RxNE                     6
+#define I2C_SR1_TxE                      7
+#define I2C_SR1_BERR                     8
+#define I2C_SR1_ARLO                     9
+#define I2C_SR1_AF                       10
+#define I2C_SR1_OVR                      11
+#define I2C_SR1_PEC_ERR                  12
+#define I2C_SR1_TIME_OUT                 14
+#define I2C_SR1_SMB_ALERT                15
+
+// I2C_SR2 REGISTER
+#define I2C_SR2_MSL                      0
+#define I2C_SR2_BUSY                     1
+#define I2C_SR2_TRA                      2
+#define I2C_SR2_GEN_CALL                 4
+#define I2C_SR2_SMBDE_FAULT              5
+#define I2C_SR2_SMB_HOST                 6
+#define I2C_SR2_DUALF                    7
+#define I2C_SR2_PEC                      8 // 8:15 PEC
+
+
+
 #include  "stm32f407xx_gpio_driver.h" // why is this included at bottom and can i also include stmf407 in gpio.h ?
 #include "stm32f407xx_spi_driver.h"
+#include "stm32f407xx_i2c_driver.h"
 
 #endif /* INC_STM32F407XX_H_ */

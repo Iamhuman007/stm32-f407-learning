@@ -82,7 +82,7 @@ void GPIO_Init(GPIO_Handle_t *pGPIOHandle){
        {
     	   /*How do we know what is the value of Pin Mode, is it that the user creates a instance of PinConfig and handle structure and then passes them to this fn?*/
     	   temp=(pGPIOHandle->GPIO_PinConfig.GPIO_PinMode << (2 *pGPIOHandle->GPIO_PinConfig.GPIO_PinNumber));
-    	   pGPIOHandle->pGPIOx->MODER &= ~(0x3 << pGPIOHandle->GPIO_PinConfig.GPIO_PinNumber);
+    	   pGPIOHandle->pGPIOx->MODER &= ~(0x3 << 2* pGPIOHandle->GPIO_PinConfig.GPIO_PinNumber);
     	   pGPIOHandle->pGPIOx->MODER|=temp;
     	   temp=0;
        }else
