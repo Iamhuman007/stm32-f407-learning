@@ -80,7 +80,7 @@ void SPI2_Inits(void)
 
 int main(void)
 {
-	char user_data[] = "Hello world";
+	char user_data[] = "Bro you have done it, first down, lets build own";
 
 	buttoninits();
 

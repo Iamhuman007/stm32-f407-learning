@@ -121,12 +121,12 @@ void SPI_SendData(SPI_RegDef_t *pSPIx, uint8_t *pTxBuffer, uint32_t Len)
 
 void SPI_ReceiveData(SPI_RegDef_t *pSPIx, uint8_t *pRxBuffer, uint32_t Len)
 {
-	while(Len == 0)
+	while(Len > 0)
 		{
 			// firmware has no access to Tx or Rx buffer, indirect access via Data Register(28.5.4)
 
 		     // wait until RXNE is send
-			while (SPI_GetFlagStatus(pSPIx, SPI_RXNE_FLAG) == FLAG_SET ){}                            //!(pSPIx->SR & (1 << SPI_SR_TXE))
+			while (SPI_GetFlagStatus(pSPIx, SPI_RXNE_FLAG) == FLAG_RESET ){}                            //!(pSPIx->SR & (1 << SPI_SR_TXE))
 
 
 				if(pSPIx->CR1 & (1 << SPI_CR1_DFF))

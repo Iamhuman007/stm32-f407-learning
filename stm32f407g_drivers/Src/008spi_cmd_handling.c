@@ -406,8 +406,12 @@
 //AF5
 #include"stm32f407xx.h"
 #include"string.h"
+#include <stdio.h>
 //#include"stm32f407xx_spi_driver.c"
 //#include"stm32f407xx_gpio_driver.c" already included in stm32f407xx.h
+
+
+extern void initialise_monitor_handles();
 
 //command codes
 #define COMMAND_LED_CTRL      		0x50
@@ -433,6 +437,10 @@
 
 void delay(void){
 
+	for(uint32_t i=0; i<500000/9; i++);
+}
+void delay1(void){
+
 	for(uint32_t i=0; i<500000/2; i++);
 }
 
@@ -443,7 +451,7 @@ void SPI2_GPIOInits(void)
 	SPIpins.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_ALTFN;
 	SPIpins.GPIO_PinConfig.GPIO_PinOPType = GPIO_OP_TYPE_PP;
 	SPIpins.GPIO_PinConfig.GPIO_PinAltFunMode = 5;
-	SPIpins.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_NO_PUPD;
+	SPIpins.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_PIN_NO_PUPD;
 	SPIpins.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_FAST;
 
 	//SCLK
@@ -472,7 +480,7 @@ void buttoninits(void)
 	   GPIObtn.GPIO_PinConfig.GPIO_PinMode = GPIO_MODE_IN;
 	   GPIObtn.GPIO_PinConfig.GPIO_PinSpeed = GPIO_SPEED_FAST;
 
-	   GPIObtn.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_NO_PUPD;
+	   GPIObtn.GPIO_PinConfig.GPIO_PinPuPdControl = GPIO_PIN_NO_PUPD;
 
 	   GPIO_Init(&GPIObtn);
 }
@@ -488,7 +496,7 @@ void SPI2_Inits(void)
 	SPI2handle.SPIConfig.SPI_BusConfig = SPI_BUS_CONFIG_FD;
 	SPI2handle.SPIConfig.SPI_DFF = SPI_DFF_8BITS;
 	SPI2handle.SPIConfig.SPI_SSM =SPI_SSM_DI; // Hardware slave management  enabled for NSS pin
-	SPI2handle.SPIConfig.SPI_ScklSpeed = SPI_SCLK_SPEED_DIV8;
+	SPI2handle.SPIConfig.SPI_SclkSpeed = SPI_SCLK_SPEED_DIV32;
 
 	 SPI_Init(&SPI2handle);
 
@@ -496,7 +504,7 @@ void SPI2_Inits(void)
 
 uint8_t SPI_VerifyResponse(uint8_t ackbyte)
 {
-	if (ackbyte == 0xF5)
+	if (ackbyte == (uint8_t)0xF5)
 	{
 		return 1;
 	}
@@ -504,6 +512,8 @@ uint8_t SPI_VerifyResponse(uint8_t ackbyte)
 	{
 		return 0;
 	}
+
+//	return 1;
 }
 
 
@@ -511,8 +521,8 @@ int main(void)
 {
 	uint8_t dummy_write = 0xff;
 	uint8_t dummy_read;
-	uint8_t args[2];
-
+	initialise_monitor_handles();
+    printf("Application running \n");
 	buttoninits();
 
     SPI2_GPIOInits();
@@ -530,19 +540,24 @@ int main(void)
     {
 
     while(!GPIO_ReadFromInputPin(GPIOA, GPIO_PIN_NO_0)){}
-    delay();
-
+    delay1();
+    printf("CMD 1 \n");
     // to enable SPI SPE has to be set in control register, all the config has to be done while the SPE bit is reset
     SPI_PeripheralControl(SPI2, ENABLE);
 
     // Command no 1
-    uint8_t command_code =  CMD_LED_CTRL;
+    uint8_t command_code =  COMMAND_LED_CTRL ;
     uint8_t ackbyte;
+    uint8_t args[2];
+
     // send command
     SPI_SendData(SPI2, &command_code, 1);
 
     // do dummy read to clear RXNE
     SPI_ReceiveData(SPI2, &dummy_read, 1);
+//      printf("RX = %x\n", dummy_read);
+
+
 
     // send some dummy 1byte to fetch reponse from the slave  ----- i didnt understand why dummy bit is sent here?
     SPI_SendData(SPI2, &dummy_write, 1);
@@ -554,7 +569,9 @@ int main(void)
     	// send other arguments
     	args[0] = LED_PIN;
     	args[1] = LED_ON;
-    	SPI_SendData(SPI2, &args, 2);
+    	SPI_SendData(SPI2, args, 2);
+    	// do dummy read to clear RXNE
+    	        SPI_ReceiveData(SPI2, &dummy_read, 2);
     }
     // end of led control command 1
 
@@ -562,23 +579,23 @@ int main(void)
     // command 2: CMD_SENSOR_READ
 
     while(!GPIO_ReadFromInputPin(GPIOA, GPIO_PIN_NO_0)){}
-       delay();
-
+       delay1();
+       printf("CMD 2 \n");
     command_code = COMMAND_SENSOR_READ;
     SPI_SendData(SPI2, &command_code, 1);
     // do dummy read to clear RXNE
     SPI_ReceiveData(SPI2, &dummy_read, 1);
 
 
-    SPI_SendData(SPI2, &dummy_write, 1);
+    SPI_SendData(SPI2, &dummy_write, 1); // to receive the ack or nack bit from slave since only master initialize data tx
     SPI_ReceiveData(SPI2, &ackbyte, 1);
 
     if (SPI_VerifyResponse(ackbyte))
     {
     	// send other arguments
     	args[0] = ANALOG_PIN0;
-//    	args[1] = LED_ON;
-    	SPI_SendData(SPI2, &args, 1);
+
+    	SPI_SendData(SPI2, args, 1);
 
 
         // do dummy read to clear RXNE
@@ -591,20 +608,105 @@ int main(void)
         SPI_SendData(SPI2, &dummy_write, 1);
         uint8_t analog_read;
         SPI_ReceiveData(SPI2, &analog_read, 1);
+        printf("Analog: %d \n",analog_read);
     }
 
+// command 3: COMMAND_LED_READ. Send Pin no Receive 0 or 1
+
+    while(!GPIO_ReadFromInputPin(GPIOA, GPIO_PIN_NO_0)){}
+    delay1();
+    printf("CMD 3 \n");
+    command_code = COMMAND_LED_READ;
+
+    // Sending command
+    SPI_SendData(SPI2, &command_code, 1);
+    SPI_ReceiveData(SPI2, &dummy_read, 1);
+
+    // Receiving Acknowledgment
+    SPI_SendData(SPI2, &dummy_write, 1);
+    SPI_ReceiveData(SPI2, &ackbyte, 1);
+
+    if(SPI_VerifyResponse(ackbyte))
+    {
+    	// Input
+    	args[0] = LED_PIN;
+        SPI_SendData(SPI2, args, 1);
+        SPI_ReceiveData(SPI2, &dummy_read, 1); // to clear RXNE bit
+
+        delay();
+
+        // Response
+        SPI_SendData(SPI2, &dummy_write, 1);
+        uint8_t pin_status;
+        SPI_ReceiveData(SPI2, &pin_status, 1);
+        printf("COMMAND_READ_LED %d\n",pin_status);
+    }
+
+    // command 4: COMMAND_PRINT. Send string and Len.
+
+        while(!GPIO_ReadFromInputPin(GPIOA, GPIO_PIN_NO_0)){}
+        delay1();
+        printf("CMD 4 \n");
+        command_code = COMMAND_PRINT;
 
 
+        // Sending command
+        SPI_SendData(SPI2, &command_code, 1);
+        SPI_ReceiveData(SPI2, &dummy_read, 1);
+
+        // Receiving Acknowledgment
+        SPI_SendData(SPI2, &dummy_write, 1);
+        SPI_ReceiveData(SPI2, &ackbyte, 1);
+
+        if(SPI_VerifyResponse(ackbyte))
+        {
+        	// Input
+        	char user_data[] = "I am about to finish want to move to next thing in life";
+            uint8_t dataLen = strlen(user_data);
+            SPI_SendData(SPI2, &dataLen, 1);
+            SPI_ReceiveData(SPI2, &dummy_read, 1);
+
+            delay();
+
+            for(int i=0; i<dataLen; i++)
+            {
+				SPI_SendData(SPI2, (uint8_t*)&user_data[i], 1);
+				SPI_ReceiveData(SPI2, &dummy_read, 1); // to clear RXNE bit
+            }
+
+        }
+       // command 5: COMMAND_ID_READ. Receive 10 byte id.
+
+            while(!GPIO_ReadFromInputPin(GPIOA, GPIO_PIN_NO_0)){}
+            delay1();
+            printf("CMD 5 \n");
+            command_code = COMMAND_ID_READ;
 
 
+            // Sending command
+            SPI_SendData(SPI2, &command_code, 1);
+            SPI_ReceiveData(SPI2, &dummy_read, 1);
 
+            // Receiving Acknowledgment
+            SPI_SendData(SPI2, &dummy_write, 1);
+            SPI_ReceiveData(SPI2, &ackbyte, 1);
 
+            if(SPI_VerifyResponse(ackbyte))
+            {
+            	// Response
+            	char response[11];
+            	for(int i=0; i<10; i++)
+            	{
+					SPI_SendData(SPI2, &dummy_write, 1);
+					SPI_ReceiveData(SPI2, (uint8_t*)&response[i], 1); // to clear RXNE bit
+            	}
 
+            	response[10] = '\0';
+            	printf("ID: %s\n",response);
 
+            }
 
-
-
-     // First send length information
+// First send length information
 //    uint8_t dataLen = strlen(user_data);
 //    SPI_SendData(SPI2, &dataLen, 1);
 //

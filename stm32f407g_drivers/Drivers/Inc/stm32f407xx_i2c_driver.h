@@ -57,18 +57,46 @@ typedef struct
 #define I2C_FM_DUTY_16_9      1
 
 
-// Flag Status
+#define I2C_ACK_ENABLE        1
+#define I2C_ACK_DISABLE       0
 
-#define I2C_SB_FLAG     (1 << I2C_SR1_SB)
-#define I2C_TXE_FLAG     (1 << I2C_SR1_TxE)
-#define I2C_RXNE_FLAG     (1 << I2C_SR1_RxNE)
-#define I2C_ADDR_FLAG     (1 << I2C_SR1_ADDR)
-#define I2C_BTF_FLAG     (1 << I2C_SR1_BTF)
-#define I2C_BERR_FLAG     (1 << I2C_SR1_BERR)
-#define I2C_ARLO_FLAG     (1 << I2C_SR1_ARLO)
-#define I2C_STOPF_FLAG     (1 << I2C_SR1_STOPF)
+/* I2C applications state (developed considering interrupt case)*/
+#define I2C_READY             0
+#define I2C_BUSY_IN_TX        1
+#define I2C_BUSY_IN_RX        2
 
 
+/*
+ * I2C related status flags definitions
+ */
+#define I2C_FLAG_TXE   		( 1 << I2C_SR1_TxE)
+#define I2C_FLAG_RXNE   	( 1 << I2C_SR1_RxNE)
+#define I2C_FLAG_SB			( 1 << I2C_SR1_SB)
+#define I2C_FLAG_OVR  		( 1 << I2C_SR1_OVR)
+#define I2C_FLAG_AF   		( 1 << I2C_SR1_AF)
+#define I2C_FLAG_ARLO 		( 1 << I2C_SR1_ARLO)
+#define I2C_FLAG_BERR 		( 1 << I2C_SR1_BERR)
+#define I2C_FLAG_STOPF 		( 1 << I2C_SR1_STOPF)
+#define I2C_FLAG_ADD10 		( 1 << I2C_SR1_ADD10)
+#define I2C_FLAG_BTF  		( 1 << I2C_SR1_BTF)
+#define I2C_FLAG_ADDR 		( 1 << I2C_SR1_ADDR)
+#define I2C_FLAG_TIMEOUT 	( 1 << I2C_SR1_TIME_OUT)
+
+// just defining them %%%%%%%%%%%%%% i think found the correct place in .h but may cuase errors.
+#define I2C_DISABLE_SR    RESET
+#define I2C_ENABLE_SR     SET
+
+/* I2C application States*/
+#define I2C_EV_TX_CMPLT    0
+#define I2C_EV_RX_CMPLT    1
+#define I2C_EV_STOP        2
+#define I2C_ERROR_BERR  3
+#define I2C_ERROR_ARLO  4
+#define I2C_ERROR_AF    5
+#define I2C_ERROR_OVR   6
+#define I2C_ERROR_TIMEOUT 7
+#define I2C_EV_DATA_REQ   8
+#define I2C_EV_DATA_RCV   9
 
 /******************************************************************************************
  *								APIs supported by this driver
@@ -90,24 +118,41 @@ void I2C_DeInit(I2C_RegDef_t *pI2Cx);
  *  Data send and receive
  */
 
-void I2C_MasterSendData(I2C_Handle_t *pI2CHandle, uint8_t *Txbuffer, uint32_t Len, uint8_t SlaveAddr);
+void I2C_MasterSendData(I2C_Handle_t *pI2CHandle, uint8_t *pTxbuffer, uint32_t Len, uint8_t SlaveAddr, uint8_t Sr);
+void I2C_MasterReceiveData(I2C_Handle_t *pI2CHandle, uint8_t *pRxbuffer, uint32_t Len, uint8_t SlaveAddr, uint8_t Sr);
+
+
+// non blocking
+uint8_t  I2C_MasterSendDataIT(I2C_Handle_t *pI2CHandle,uint8_t *pTxBuffer, uint32_t Len,uint8_t SlaveAddr,uint8_t Sr);
+uint8_t I2C_MasterReceiveDataIT(I2C_Handle_t *pI2CHandle, uint8_t *pRxbuffer, uint32_t Len, uint8_t SlaveAddr, uint8_t Sr);
+void I2C_CloseSendData(I2C_Handle_t *pI2CHandle);
+void I2C_CloseReceiveData(I2C_Handle_t *pI2CHandle);
+
+// Slave mode
+void I2C_SlaveSendData(I2C_RegDef_t *pI2Cx, uint8_t data); // when we receive request from master we send data one byte at a time
+uint8_t I2C_SlaveReceiveData(I2C_RegDef_t *pI2Cx);
 
 /*
  * IRQ Configuration and ISR handling
  */
 void I2C_IRQInterruptConfig(uint8_t IRQNumber, uint8_t EnorDi);
 void I2C_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority);
-
+void I2C_EV_IRQHandling(I2C_Handle_t *pI2CHandle);
+void I2C_ER_IRQHandling(I2C_Handle_t *pI2CHandle);
 
 /*
  *  Other Peripheral Control APIs
  */
-// enable or disable SPE bit
+
 void I2C_PeripheralControl(I2C_RegDef_t *pI2Cx, uint8_t EnorDi);
 uint8_t I2C_GetFlagStatus(I2C_RegDef_t *pI2Cx , uint32_t FlagName);
+void I2C_ManageAcking(I2C_RegDef_t *pI2Cx, uint8_t EnorDi);
+void I2C_GenerateStopCondition(I2C_RegDef_t *pI2Cx);
 
 
 /* Application Callback*/
 void I2C_ApplicationEventCallback(I2C_Handle_t *pI2CHandle, uint8_t AppEv);
+
+void I2C_SlaveENDISCallbackEvents(I2C_RegDef_t *pI2Cx, uint8_t EnorDi);
 
 #endif /* INC_STM32F407XX_I2C_DRIVER_H_ */
