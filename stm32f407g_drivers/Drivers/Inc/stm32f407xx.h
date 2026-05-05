@@ -429,6 +429,11 @@ typedef struct
 #define IRQ_NO_I2C2_ER      34
 #define IRQ_NO_I2C3_EV      79
 #define IRQ_NO_I2C3_ER      80
+#define IRQ_NO_USART1       37
+#define IRQ_NO_USART2       38
+#define IRQ_NO_USART3       39
+#define IRQ_NO_USART5       52
+#define IRQ_NO_USART6       53
 
 /*
  * macros for all the possible priority levels
@@ -612,7 +617,7 @@ typedef struct
 #include  "stm32f407xx_gpio_driver.h" // why is this included at bottom and can i also include stmf407 in gpio.h ?
 #include "stm32f407xx_spi_driver.h"
 #include "stm32f407xx_i2c_driver.h"
-//#include "stm32f407xx_usart_driver.h"
+#include "stm32f407xx_usart_driver.h"
 #include "stm32f407xx_rcc_driver.h"
 
 #endif /* INC_STM32F407XX_H_ */

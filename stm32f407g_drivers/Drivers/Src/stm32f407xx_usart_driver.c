@@ -278,6 +278,8 @@ uint8_t USART_ReceiveDataIT(USART_Handle_t *pUSARTHandle,uint8_t *pRxBuffer, uin
 		pUSARTHandle->pRxBuffer = pRxBuffer;
 		pUSARTHandle->RxBusyState = USART_BUSY_IN_RX;
 
+		(void)pUSARTHandle->pUSARTx->DR;
+
 		//Implement the code to enable interrupt for RXNE
 		pUSARTHandle->pUSARTx->CR1 |= (1 << USART_CR1_RXNEIE);
 
@@ -481,6 +483,7 @@ void USART_IRQHandling(USART_Handle_t *pUSARTHandle)
 {
 
 	uint32_t temp1 , temp2, temp3;
+	uint16_t *pdata;
 
 /*************************Check for TC flag ********************************************/
 
@@ -543,7 +546,7 @@ void USART_IRQHandling(USART_Handle_t *pUSARTHandle)
 				if(pUSARTHandle->USART_Config.USART_WordLength == USART_WORDLEN_9BITS)
 				{
 					//if 9BIT , load the DR with 2bytes masking the bits other than first 9 bits
-					pdata = (uint16_t*) pTxBuffer;
+					pdata = (uint16_t*) pUSARTHandle->pTxBuffer;
 
 					//loading only first 9 bits , so we have to mask with the value 0x01FF
 					pUSARTHandle->pUSARTx->DR = (*pdata & (uint16_t)0x01FF);
@@ -553,8 +556,8 @@ void USART_IRQHandling(USART_Handle_t *pUSARTHandle)
 					{
 						//No parity is used in this transfer , so, 9bits of user data will be sent
 						//Implement the code to increment pTxBuffer twice
-						pTxBuffer++;
-						pTxBuffer++;
+						pUSARTHandle->pTxBuffer++;
+						pUSARTHandle->pTxBuffer++;
 
 						//Implement the code to decrement the length
 						pUSARTHandle->TxLen-=2;
@@ -563,7 +566,7 @@ void USART_IRQHandling(USART_Handle_t *pUSARTHandle)
 					{
 						//Parity bit is used in this transfer . so , 8bits of user data will be sent
 						//The 9th bit will be replaced by parity bit by the hardware
-						pTxBuffer++;
+						pUSARTHandle->pTxBuffer++;
 
 						//Implement the code to decrement the length
 						pUSARTHandle->TxLen--;
@@ -572,21 +575,21 @@ void USART_IRQHandling(USART_Handle_t *pUSARTHandle)
 				else
 				{
 					//This is 8bit data transfer
-					pUSARTHandle->pUSARTx->DR = (*pTxBuffer  & (uint8_t)0xFF);
+					pUSARTHandle->pUSARTx->DR = (*(pUSARTHandle->pTxBuffer)  & (uint8_t)0xFF);
 
 					//Implement the code to increment the buffer address
-					pTxBuffer++;
+					pUSARTHandle->pTxBuffer++;
 
 					//Implement the code to decrement the length
 					pUSARTHandle->TxLen--;
 				}
 
 			}
-			if (TxLen == 0 )
+			if (pUSARTHandle->TxLen == 0 )
 			{
 				//TxLen is zero
 				//Implement the code to clear the TXEIE bit (disable interrupt for TXE flag )
-				pUSARTHandle->pUSARTx->CR1 & ~(1 << USART_CR1_TXEIE);
+				pUSARTHandle->pUSARTx->CR1 &= ~(1 << USART_CR1_TXEIE);
 			}
 		}
 	}
@@ -617,11 +620,11 @@ void USART_IRQHandling(USART_Handle_t *pUSARTHandle)
 						//No parity is used. so, all 9bits will be of user data
 
 						//read only first 9 bits so mask the DR with 0x01FF
-						*((uint16_t*) pRxBuffer) = (pUSARTHandle->pUSARTx->DR  & (uint16_t)0x01FF);
+						*((uint16_t*)pUSARTHandle->pRxBuffer) = (pUSARTHandle->pUSARTx->DR  & (uint16_t)0x01FF);
 
 						//Now increment the pRxBuffer two times
-						pRxBuffer++;
-						pRxBuffer++;
+						pUSARTHandle->pRxBuffer++;
+						pUSARTHandle->pRxBuffer++;
 
 						//Implement the code to decrement the length
 						pUSARTHandle->RxLen-=2;
@@ -629,10 +632,10 @@ void USART_IRQHandling(USART_Handle_t *pUSARTHandle)
 					else
 					{
 						//Parity is used. so, 8bits will be of user data and 1 bit is parity
-						 *pRxBuffer = (pUSARTHandle->pUSARTx->DR  & (uint8_t)0xFF);
+						 *(pUSARTHandle->pRxBuffer) = (pUSARTHandle->pUSARTx->DR  & (uint8_t)0xFF);
 
 						 //Now increment the pRxBuffer
-						 pRxBuffer++;
+						 pUSARTHandle->pRxBuffer++;
 
 						 //Implement the code to decrement the length
 						 pUSARTHandle->RxLen-=1;
@@ -648,7 +651,7 @@ void USART_IRQHandling(USART_Handle_t *pUSARTHandle)
 						//No parity is used , so all 8bits will be of user data
 
 						//read 8 bits from DR
-						 *pRxBuffer = (uint8_t) (pUSARTHandle->pUSARTx->DR  & (uint8_t)0xFF);
+						 *(pUSARTHandle->pRxBuffer) = (uint8_t) (pUSARTHandle->pUSARTx->DR  & (uint8_t)0xFF);
 					}
 
 					else
@@ -656,12 +659,12 @@ void USART_IRQHandling(USART_Handle_t *pUSARTHandle)
 						//Parity is used, so , 7 bits will be of user data and 1 bit is parity
 
 						//read only 7 bits , hence mask the DR with 0X7F
-						 *pRxBuffer = (uint8_t) (pUSARTHandle->pUSARTx->DR  & (uint8_t)0x7F);
+						 *pUSARTHandle->pRxBuffer = (uint8_t) (pUSARTHandle->pUSARTx->DR  & (uint8_t)0x7F);
 
 					}
 
 					//Now , increment the pRxBuffer
-					pRxBuffer++;
+					pUSARTHandle->pRxBuffer++;
 
 					//Implement the code to decrement the length
 					 pUSARTHandle->RxLen-=1;
@@ -735,7 +738,7 @@ void USART_IRQHandling(USART_Handle_t *pUSARTHandle)
 		//Need not to clear the ORE flag here, instead give an api for the application to clear the ORE flag .
 
 		//this interrupt is because of Overrun error
-		USART_ApplicationEventCallback(pUSARTHandle,USART_EVENT_ORE);
+		USART_ApplicationEventCallback(pUSARTHandle, USART_ERR_ORE);
 	}
 
 
@@ -758,7 +761,7 @@ void USART_IRQHandling(USART_Handle_t *pUSARTHandle)
 				is detected. It is cleared by a software sequence (an read to the USART_SR register
 				followed by a read to the USART_DR register).
 			*/
-			USART_ApplicationEventCallback(pUSARTHandle,USART_ERREVENT_FE);
+			USART_ApplicationEventCallback(pUSARTHandle,USART_ERR_FE);
 		}
 
 		if(temp1 & ( 1 << USART_SR_NE) )
@@ -768,14 +771,35 @@ void USART_IRQHandling(USART_Handle_t *pUSARTHandle)
 				software sequence (an read to the USART_SR register followed by a read to the
 				USART_DR register).
 			*/
-			USART_ApplicationEventCallback(pUSARTHandle,USART_ERREVENT_NE);
+			USART_ApplicationEventCallback(pUSARTHandle,USART_ERR_NE);
 		}
 
 		if(temp1 & ( 1 << USART_SR_ORE) )
 		{
-			USART_ApplicationEventCallback(pUSARTHandle,USART_ERREVENT_ORE);
+			USART_ApplicationEventCallback(pUSARTHandle,USART_ERR_ORE);
 		}
 	}
 
+
+}
+
+
+
+/*********************************************************************
+ * @fn      		  - USART_ApplicationEventCallback
+ *
+ * @brief             -
+ *
+ * @param[in]         -
+ * @param[in]         -
+ * @param[in]         -
+ *
+ * @return            -
+ *
+ * @Note              -
+
+ */
+__weak void USART_ApplicationEventCallback(USART_Handle_t *pUSARTHandle,uint8_t event)
+{
 
 }

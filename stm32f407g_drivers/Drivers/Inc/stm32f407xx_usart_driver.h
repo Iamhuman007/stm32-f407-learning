@@ -114,14 +114,14 @@ typedef struct
 #define USART_READY 0
 
 
-#define 	USART_EVENT_TX_CMPLT   0
-#define		USART_EVENT_RX_CMPLT   1
-#define		USART_EVENT_IDLE      2
-#define		USART_EVENT_CTS       3
-#define		USART_EVENT_PE        4
-#define		USART_ERR_FE     	5
-#define		USART_ERR_NE    	 6
-#define		USART_ERR_ORE    	7
+#define USART_EVENT_TX_CMPLT   0
+#define	USART_EVENT_RX_CMPLT   1
+#define	USART_EVENT_IDLE      2
+#define	USART_EVENT_CTS       3
+#define	USART_EVENT_PE        4
+#define	USART_ERR_FE     	5
+#define	USART_ERR_NE    	 6
+#define	USART_ERR_ORE    	7
 
 
 
@@ -156,8 +156,11 @@ void USART_ClearFlag(USART_RegDef_t *pUSARTx, uint16_t StatusFlagName);
 
 void USART_IRQInterruptConfig(uint8_t IRQNumber, uint8_t EnorDi);
 void USART_IRQPriorityConfig(uint8_t IRQNumber, uint32_t IRQPriority);
+void USART_IRQHandling(USART_Handle_t *pUSARTHandle);
 
-
-
+/*
+ * Application Callbacks
+ */
+void USART_ApplicationEventCallback(USART_Handle_t *pUSARTHandle,uint8_t ApEv);
 
 #endif /* INC_STM32F407XX_USART_DRIVER_H_ */
